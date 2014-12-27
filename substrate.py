@@ -1,3 +1,4 @@
+import random
 import PIL.Image
 import math
 import os, os.path
@@ -79,8 +80,10 @@ def layout(directory, xc, yc) :
         sys.exit(1)
 
     xw, yw = images[0].image.size
-    padding_x = int(xw * .618 * 0.5)
-    padding_y = int(xw * .618 * 0.5)
+
+    pad_ratio = 0.3
+    padding_x = int(xw * pad_ratio * 0.5)
+    padding_y = int(xw * pad_ratio * 0.5)
     
     xwt = xw * xc + padding_x * (xc + 1) + padding_x * xc
     ywt = yw * yc + padding_y * (yc + 1) + padding_y * yc
@@ -93,14 +96,63 @@ def layout(directory, xc, yc) :
         _y = _y * xw + (padding_y * _y) + (padding_y * (_y + 1))
         return (_x, _y)
 
-    def get_img(_x, _y) :
+    def get_img(_x, _y, just_idx=False) :
         #local yc, xc, xii, yii, images
         if _x < 0 or _y < 0 :
             return None
         if _x >= xc or _y >= yc :
             return None
-        return images[xii * yc + yii]
+        idx = _x * yc + _y
+        if just_idx :
+            return idx
+        else :
+            return images[idx]
 
+    def get_neighborimgs(_x, _y) :
+        for xd, yd in [(0, 1), (0, -1), (1, 0), (-1, 0)] :
+            i = get_img(_x + xd, _y + yd)
+            if i is not None :
+                yield i
+
+    def maybeswap(pos1, pos2) :
+        neighbors_1 = list(get_neighborimgs(*pos1))
+        neighbors_2 = list(get_neighborimgs(*pos2))
+        def sum_sim(list_of_neighbors) :
+            sim = 0.0
+            for a, list_of_b in list_of_neighbors :
+                for b in list_of_b :
+                    sim += a.similar(b)
+            print 'similarity is: %f' % sim
+            return sim
+
+        img_1 = get_img(*pos1)
+        img_2 = get_img(*pos2)
+        no = [(img_1, neighbors_1), (img_2, neighbors_2)]
+        yes = [(no[0][0], no[1][1]), (no[1][0], no[0][1])]
+
+        if sum_sim(yes) > sum_sim(no) :
+            print 'do swap %s & %s' % (str(pos1), str(pos2))
+            idx_1 = get_img(*pos1, just_idx=True)
+            idx_2 = get_img(*pos2, just_idx=True)
+            images[idx_1] = img_2
+            images[idx_2] = img_1
+        else :
+            print 'no swap...'
+
+    NUM_SWAPMOVES = xc * yc * 16
+
+    for i in range(NUM_SWAPMOVES):
+        x1 = random.randrange(0, xc)
+        y1 = random.randrange(0, yc)
+        x2 = random.randrange(0, xc)
+        y2 = random.randrange(0, yc)
+
+        pos1 = (x1, y1)
+        pos2 = (x2, y2)
+
+        maybeswap(pos1, pos2)
+
+    # solidify layout
     for xii in range(xc) :
         for yii in range(yc) :
             # copy the image into the composite
