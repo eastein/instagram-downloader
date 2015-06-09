@@ -1,3 +1,4 @@
+import json
 import sys
 import random
 import PIL.Image
@@ -95,10 +96,22 @@ class Photo(object):
         return self.similarity_to[o]
 
 
-def layout(directory, xc, yc):
+def layout(directory, xc, yc, min_rating):
+    ratings = json.load(open(os.path.join(directory, 'ratings.json')))
+
     image_fns = os.listdir(directory)
     image_fns.sort()
-    image_fns = image_fns[0:xc * yc]
+
+    image_fns = [f for f in image_fns if ((f in ratings) and (ratings[f]['rating'] >= min_rating))]
+
+    need_images = xc * yc
+    
+    print 'Total %d usable images.' % len(image_fns)
+
+    if len(image_fns) < need_images :
+        raise RuntimeError('Not enough images. Abort.')
+
+    image_fns = image_fns[0:need_images]
     images = list()
     for i in range(len(image_fns)):
         images.append(Photo.get_image(os.path.join(directory, image_fns[i])))
@@ -203,5 +216,5 @@ def layout(directory, xc, yc):
 
 
 if __name__ == '__main__':
-    c = layout(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
-    c.save(sys.argv[4])
+    c = layout(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
+    c.save(sys.argv[5])
