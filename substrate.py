@@ -120,20 +120,23 @@ def layout(directory, xc, yc, min_rating):
     xw = max([i.image.size[0] for i in images])
     yw = max([i.image.size[1] for i in images])
 
-    #pad_ratio = 0.518
-    pad_ratio = 0.318
+    interstitial_pad_ratio = 0.318
+    edge_pad_ratio = 1.5
 
-    padding_x = int(xw * pad_ratio)
-    padding_y = int(yw * pad_ratio)
+    padding_x = int(xw * interstitial_pad_ratio)
+    padding_y = int(yw * interstitial_pad_ratio)
 
-    xwt = xw * xc + padding_x * (xc + 1)
-    ywt = yw * yc + padding_y * (yc + 1)
+    margin_x = int(edge_pad_ratio * xw)
+    margin_y = int(edge_pad_ratio * yw)
+
+    xwt = xw * xc + padding_x * (xc - 1) + margin_x * 2
+    ywt = yw * yc + padding_y * (yc - 1) + margin_y * 2
 
     composite_img = make_black((xwt, ywt))
 
     def get_imgcorner(_x, _y):
-        _x = _x * xw + (padding_x * (_x + 1))
-        _y = _y * yw + (padding_y * (_y + 1))
+        _x = _x * xw + (padding_x * _x + 1) + margin_x
+        _y = _y * yw + (padding_y * _y + 1) + margin_y
         return (_x, _y)
 
     def get_img(_x, _y, just_idx=False):
