@@ -160,40 +160,70 @@ def layout(directory, xc, yc, min_rating):
         neighbors_1 = list(get_neighborimgs(*pos1))
         neighbors_2 = list(get_neighborimgs(*pos2))
 
-        def sum_sim(list_of_neighbors):
-            sim = 0.0
+        def raw_sim(list_of_neighbors):
             for a, list_of_b in list_of_neighbors:
                 for b in list_of_b:
-                    sim += a.similar(b)
+                    yield a.similar(b)
+            
+        def sum_sim(list_of_neighbors):
+            sim = 0.0
+            for simil in raw_sim(list_of_neighbors):
+                sim += simil
             print 'similarity is: %f' % sim
             return sim
+            
+        def avg_sim(list_of_neighbors):
+            n = float(len(list_of_neighbors))
+            return sum(list(raw_sim(list_of_neighbors))) / n
 
         img_1 = get_img(*pos1)
         img_2 = get_img(*pos2)
         no = [(img_1, neighbors_1), (img_2, neighbors_2)]
         yes = [(no[0][0], no[1][1]), (no[1][0], no[0][1])]
 
-        if sum_sim(yes) > sum_sim(no):
-            print 'do swap %s & %s' % (str(pos1), str(pos2))
+        metric_function = avg_sim
+
+        if metric_function(yes) > metric_function(no):
             idx_1 = get_img(*pos1, just_idx=True)
             idx_2 = get_img(*pos2, just_idx=True)
             images[idx_1] = img_2
             images[idx_2] = img_1
+            return True
         else:
-            print 'no swap...'
+            return False
 
-    NUM_SWAPMOVES = xc * yc * 100
+    RUN_NOSWAP_NEEDED = 110
 
-    for i in range(NUM_SWAPMOVES):
-        x1 = random.randrange(0, xc)
-        y1 = random.randrange(0, yc)
-        x2 = random.randrange(0, xc)
-        y2 = random.randrange(0, yc)
+    STATUS_EVERY = 100
 
-        pos1 = (x1, y1)
-        pos2 = (x2, y2)
+    total_steps = 0
+    total_swaps = 0
+    noswap_run = 0
+    run_hwm = 0
 
-        maybeswap(pos1, pos2)
+    try:
+        while noswap_run < RUN_NOSWAP_NEEDED:
+            x1 = random.randrange(0, xc)
+            y1 = random.randrange(0, yc)
+            x2 = random.randrange(0, xc)
+            y2 = random.randrange(0, yc)
+
+            pos1 = (x1, y1)
+            pos2 = (x2, y2)
+
+            if maybeswap(pos1, pos2):
+                noswap_run = 0
+                total_swaps += 1
+            else:
+                noswap_run += 1
+                run_hwm = max(run_hwm, noswap_run)
+
+            total_steps += 1
+
+            if total_steps % STATUS_EVERY == 0:
+                print 'steps=%d swaps=%d run_hwm=%d current_run=%d' % (total_steps, total_swaps, run_hwm, noswap_run)
+    except KeyboardInterrupt:
+        print 'Interrupted during optimization. Creating the output image...'
 
     imgs_pasted = 0
 
